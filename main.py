@@ -2,10 +2,11 @@ from fastapi import FastAPI, Depends, select, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 from flask_bcrypt import check_password_hash, generate_password_hash
-from jsonmap import postRegister, getRegister, Token, getProducts, postProducts, getForgotPassword, postForgotpassword
-from models import User, Product
-from datetime import timedelta
-from myjwt import (get_db, create_access_token, get_current_user)
+from jsonmap import postRegister, getRegister, Token, getProducts, postProducts, getForgotPassword, postForgotpassword, getVerifyOtp, postVerifyOtp, getpassword, postPassword
+from models import User, Product, OTP
+from datetime import timedelta, datetime, timezone
+from myjwt import (get_db, create_access_token,
+                   get_current_user, format_phone, generate_otp)
 app = FastAPI()
 ACCESS = 30
 
@@ -53,4 +54,41 @@ def create_products(product: postProducts, db: Session = Depends(get_db), curren
     return model
 
 
-@app.post("forgot_password", response_model=)
+@app.post("forgot_password", response_model=getForgotPassword, status_code=201)
+def forgot_password(data: postForgotpassword, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = None
+    contact_type = None
+    if data.email:
+        email = data.email.lower().strip()
+        user = db.scalars(select(User).where(User.email == email))
+        contact_type = "email"
+    elif data.phone:
+        raw_phone = data.phone.strip()
+        try:
+            phone_formatted = format_phone(raw_phone)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        user = db.scalars(select(User).where(
+            User.phone == user.phone_formatted))
+        contact_type = "phone"
+    else:
+        raise HTTPException(status_code=400, detail="Email or phone required")
+
+    if not user:
+        return {"message": "If user exists, an OTP has been sent"}
+
+    db.query(select(OTP).filter_by(user_id=user.id)).delete()
+    otp_code = generate_otp()
+    otp_entry = OTP(user_id=user.id, otp=otp_code,
+                    created_on=datetime.now(timezone.utc))
+    db.add(otp_entry)
+    db.commit()
+    return {"message": "If User exists, an OTP has been sent"}
+
+
+@app.post("/verify_otp", response_model=getVerifyOtp, status_code=201)
+def verify_otp(data: postVerifyOtp, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = None
+    if data.email:
+        
+    pass
