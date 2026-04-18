@@ -90,5 +90,10 @@ def forgot_password(data: postForgotpassword, db: Session = Depends(get_db), cur
 def verify_otp(data: postVerifyOtp, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = None
     if data.email:
-        
+
+    pass
+
+
+@app.post("/reset_password")
+def reset_password():
     pass
