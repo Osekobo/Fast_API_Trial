@@ -1,13 +1,10 @@
 from pydantic import BaseModel, EmailStr
 
-
 class postRegister(BaseModel):
     id: int
     name: str
     phone: str
     email: EmailStr
-
-
 class getRegister(BaseModel):
     name: str
     phone: str
