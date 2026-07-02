@@ -8,5 +8,5 @@ def home():
 
 
 @app.get("/items/{item_id}")
-def read_item(item_id):
+def read_item(item_id:int):
     return {"Item id": item_id}
