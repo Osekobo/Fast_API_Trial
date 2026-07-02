@@ -7,6 +7,11 @@ def home():
     return {"message": "Hello world!"}
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id:int):
-    return {"Item id": item_id}
+@app.get("/users/me")
+def read_user_me():
+    return {"user_id": "the current user"}
+
+
+@app.get("/users/{user_id}")
+def read_item(user_id: str):
+    return {"Item id": user_id}
