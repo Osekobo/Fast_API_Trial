@@ -20,3 +20,22 @@ def read_item(user_id: str):
 @app.get("/files/{file_path:path}")
 def read_file(file_path: str):
     return {"file_path": file_path}
+
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+
+app = FastAPI()
+
+
+@app.post("/items/")
+async def create_item(item: Item):
+    return item
