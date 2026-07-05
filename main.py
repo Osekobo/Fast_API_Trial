@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
+from typing import Annotated
+from pydantic import BaseModel
+
 app = FastAPI()
 
 
@@ -22,10 +25,6 @@ def read_file(file_path: str):
     return {"file_path": file_path}
 
 
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-
 class Item(BaseModel):
     name: str
     description: str | None = None
@@ -33,9 +32,9 @@ class Item(BaseModel):
     tax: float | None = None
 
 
-app = FastAPI()
-
-
 @app.post("/items/")
-async def create_item(item: Item):
-    return item
+async def read_items(q: Annotated[str | None, Query(min_length=4, max_length=50, pattern="^fixedquery$")] = None):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
