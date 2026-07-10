@@ -1,5 +1,7 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from typing import Annotated
+
+from fastapi import FastAPI, Body
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
@@ -28,3 +30,9 @@ async def get_items(id: int):
 async def create_item(id: int, item: Items):
     data[id] = item.model_dump()
     return {"message": "ok", "item": data[id]}
+
+
+@app.put("/items/{item-Id}")
+async def update_item(item_id: int, item: Annotated[Items, Body(embed=True)]):
+    results = {"item_id": item_id, "item": item}
+    return results
