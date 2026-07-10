@@ -61,8 +61,3 @@ async def read_items(q: Annotated[str | None, Query(min_length=4, max_length=50,
     if q:
         results.update({"q": q})
     return results
-
-
-@app.put("/items/{items_id}")
-def put_item():
-    pass
