@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+from fastapi import FastAPI, Query, HTTPException
 from typing import Annotated
 
 from fastapi import FastAPI, Body
@@ -26,13 +28,13 @@ async def get_items(id: int):
     return data[id]
 
 
-@app.put("/items/{item_id}")
-async def create_item(id: int, item: Items):
-    data[id] = item.model_dump()
-    return {"message": "ok", "item": data[id]}
+# @app.put("/items/{item_id}")
+# async def create_item(id: int, item: Items):
+#     data[id] = item.model_dump()
+#     return {"message": "ok", "item": data[id]}
 
 
-@app.put("/items/{item-Id}")
-async def update_item(item_id: int, item: Annotated[Items, Body(embed=True)]):
-    results = {"item_id": item_id, "item": item}
-    return results
+# @app.put("/items/{item-Id}")
+# async def update_item(item_id: int, item: Annotated[Items, Body(embed=True)]):
+#     results = {"item_id": item_id, "item": item}
+#     return results

@@ -1,8 +1,11 @@
-from fastapi import FastAPI, Query, HTTPException
-from typing import Annotated
+
 from pydantic import BaseModel
+from typing import Annotated
+from fastapi import FastAPI, HTTPException, Query
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
+Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/")
@@ -55,14 +58,14 @@ def create_item(prod: Item):
     return {"id": new_id, "data": item_dict}
 
 
-@app.post("/item/")
-async def read_items(q: Annotated[str | None, Query(min_length=4, max_length=50, pattern="^fixedquery$")] = None):
-    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
-    if q:
-        results.update({"q": q})
-    return results
+# @app.post("/item/")
+# async def read_items(q: Annotated[str | None, Query(min_length=4, max_length=50, pattern="^fixedquery$")] = None):
+#     results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+#     if q:
+#         results.update({"q": q})
+#     return results
 
 
-@app.put("/items/{items_id}")
-def put_item():
-    pass
+# @app.put("/items/{items_id}")
+# def put_item():
+#     pass

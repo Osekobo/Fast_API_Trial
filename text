@@ -1,0 +1,15 @@
+To add Prometheus (for metrics collection) and Grafana (for visualization) to your FastAPI app, you need to:
+1 Instrument your FastAPI application to expose metrics in a format Prometheus can scrape.
+2 Run Prometheus configured to scrape your app’s /metrics endpoint.
+3 Run Grafana connected to Prometheus as a data source, then build or import dashboards.
+
+
+
+taskkill /F /IM "Docker Desktop.exe" 2>$null
+taskkill /F /IM "com.docker.backend.exe" 2>$null
+Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe" -Verb RunAs
+
+docker run -p 9090:9090 -v "${PWD}\prometheus.yml:/etc/prometheus/prometheus.yml" prom/prometheus
+
+# Using Docker
+docker run -d -p 3000:3000 grafana/grafana
