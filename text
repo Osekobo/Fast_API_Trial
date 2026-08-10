@@ -4,7 +4,6 @@ To add Prometheus (for metrics collection) and Grafana (for visualization) to yo
 3 Run Grafana connected to Prometheus as a data source, then build or import dashboards.
 
 
-
 taskkill /F /IM "Docker Desktop.exe" 2>$null
 taskkill /F /IM "com.docker.backend.exe" 2>$null
 Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe" -Verb RunAs
