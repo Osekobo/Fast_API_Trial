@@ -1,7 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 from pydantic import BaseModel
-# from schemas import GetProduct
-# from models import db
+from schemas import GetRegister, PostRegister
+from models import User, db
+from utils import (get_db)
 from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
@@ -43,3 +46,13 @@ def get_items():
         {"id": 1, "name": "Laptop", "price": 70000},
         {"id": 2, "name": "Phone", "price": 60000},
     ]
+
+
+@app.post("/register", response_model=GetRegister)
+def register_user(user: PostRegister, db: Session = Depends(get_db)):
+    if db.scalar(select(User).where(User.email == user.email)):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if db.scalar(select(User).where(User.phone == user.phone)):
+        raise HTTPException(status_code=400, detail="Phone already registered")
+    new_user = User(name=user.name, phone=user.phone, email=user.email)
+    pass
