@@ -1,134 +1,137 @@
-from pydantic import BaseModel, EmailStr
-from datetime import datetime, date
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+from datetime import datetime
+from .models import UserRole, ApplicationStatus
 
+# --- User schemas ---
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str = Field(..., alias="firstName")
+    last_name: str = Field(..., alias="lastName")
+    role: Optional[UserRole] = UserRole.APPLICANT
 
-class UserPostRegister(BaseModel):
-    name: str
-    phone: str
+    class Config:
+        populate_by_name = True          # allows both 'first_name' and 'firstName'
+        use_enum_values = True           # send enum values as strings in responses
+
+class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-
-class UserPostLogin(BaseModel):
+class UserOut(BaseModel):
+    id: str
     email: EmailStr
-    password: str
-
-
-class UserGetRegister(BaseModel):
-    id: int
-    name: str
-    phone: str
-    email: EmailStr
-
-
-class ProductPostMap(BaseModel):
-    name: str
-    buying_price: float
-    selling_price: float
-    model: str
-    year: int
-    condition: str
-    fuel: str
-    # created_at: str
-
-
-class ProductGetMap(ProductPostMap):
-    id: int
-
-
-class RemainingPerProductMap(BaseModel):
-    product_id: int
-    product_name: str
-    remaining_quantity: float
-
-
-class SaleDetailsItem(BaseModel):
-    product_id: int
-    quantity: float
-
-
-class SalePostMap(BaseModel):
-    details: list[SaleDetailsItem]
-
-
-class SaleGetMap(SalePostMap):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-
-class SalePerProductMap(BaseModel):
-    sale_id: int
-    product_id: int
-    quantity: float
+    first_name: str
+    last_name: str
+    role: UserRole
     created_at: datetime
 
-
-class PurchasePostMap(BaseModel):
-    product_id: int
-    quantity: float
-
-
-class PurchaseGetMap(PurchasePostMap):
-    id: int
-    quantity: float
-    product_id: int
-    created_at: datetime
-    updated_at: datetime
-
-
-class SalesPerProductOut(BaseModel):
-    product_id: int
-    product_name: str
-    total_quantity_sold: int
-    total_sales_amount: float
-
-
-class RemainingPerProductOut(BaseModel):
-    product_id: int
-    product_name: str
-    remaining_quantity: int
-
-
-class ProfitPerProduct(BaseModel):
-    product_id: int
-    product_name: str
-    total_quantity_sold: int
-    total_revenue: float
-    total_profit: float
-
-
-class ProfitPerDay(BaseModel):
-    date: date
-    total_profit: float
-
+    class Config:
+        from_attributes = True           # for SQLAlchemy ORM conversion
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
-
+    token_type: str = "bearer"
 
 class TokenData(BaseModel):
-    email: str | None = None
-    scopes: list[str] = []
+    user_id: str
 
+# --- Application schemas ---
+class ApplicationCreate(BaseModel):
+    full_name: str = Field(..., alias="fullName")
+    phone: str
+    institution: str
+    course: str
+    year_of_study: int = Field(..., alias="yearOfStudy")
+    amount: float
 
-class PaymentResponse(BaseModel):
-    id: int
-    sale_id: str
-    merchant_request_id: Optional[str] = None
-    checkout_request_id: Optional[str] = None
-    trans_code: str | None
-    trans_amount: float | None
-    phone_paid: str | None
+    class Config:
+        populate_by_name = True
+
+class ApplicationUpdate(BaseModel):
+    status: Optional[ApplicationStatus] = None
+    assigned_reviewer_id: Optional[str] = Field(None, alias="assignedReviewerId")
+
+    class Config:
+        populate_by_name = True
+
+class ApplicationOut(BaseModel):
+    id: str
+    user_id: str
+    full_name: str
+    phone: str
+    institution: str
+    course: str
+    year_of_study: int
+    amount: float
+    status: ApplicationStatus
+    assigned_reviewer_id: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Document schemas ---
+class DocumentCreate(BaseModel):
+    application_id: str = Field(..., alias="applicationId")
+    file_name: str = Field(..., alias="fileName")
+    file_url: str = Field(..., alias="fileUrl")
+
+    class Config:
+        populate_by_name = True
+
+class DocumentOut(BaseModel):
+    id: str
+    application_id: str
+    file_name: str
+    file_url: str
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Review schemas ---
+class ReviewCreate(BaseModel):
+    recommendation: str
+    comments: Optional[str] = None
+
+class ReviewOut(BaseModel):
+    id: str
+    application_id: str
+    reviewer_id: str
+    recommendation: str
+    comments: Optional[str]
     created_at: datetime
 
     class Config:
         from_attributes = True
 
+# --- Announcement schemas ---
+class AnnouncementCreate(BaseModel):
+    title: str
+    content: str
 
-class Item(BaseModel):
-    id: int
-    name: str
-    price: float
+class AnnouncementOut(BaseModel):
+    id: str
+    title: str
+    content: str
+    created_by: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Stats ---
+class StatsOut(BaseModel):
+    total: int
+    pending: int
+    approved: int
+    disbursed: float
+
+class AdminStatsOut(BaseModel):
+    users: int
+    applications: int
+    pending: int
+    disbursed: float

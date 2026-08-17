@@ -1,126 +1,112 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
-from sqlalchemy import String, Float, Integer, DateTime, create_engine
-from typing import List
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text
+from sqlalchemy.orm import relationship
 from datetime import datetime
+import uuid
+from .database import Base
+import enum
 
 
-DATABASE_URL = "postgresql://postgres:12039@localhost:5432/fast_api"
-
-engine = create_engine(DATABASE_URL)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+class UserRole(str, enum.Enum):
+    APPLICANT = "APPLICANT"
+    REVIEWER = "REVIEWER"
+    ADMIN = "ADMIN"
+    CHIEF = "CHIEF"          # new
 
 
-class Base(DeclarativeBase):
-    pass
-
-
-class Product(Base):
-    __tablename__ = "products"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(256), nullable=False)
-    buying_price: Mapped[float] = mapped_column(Float, nullable=False)
-    selling_price: Mapped[float] = mapped_column(Float, nullable=False)
-    model: Mapped[str] = mapped_column(String, nullable=False)
-    year: Mapped[int] = mapped_column(Integer, nullable=False)
-    condition: Mapped[str] = mapped_column(String, nullable=False)
-    fuel: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-    purchases: Mapped[List["Purchase"]] = relationship(
-        back_populates="product",
-        cascade="all, delete-orphan"
-    )
-
-
-class Sale(Base):
-    __tablename__ = "sales"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-
-    # Relationship with SalesDetails
-    details: Mapped[List["SalesDetails"]] = relationship(
-        back_populates="sale",
-        cascade="all, delete-orphan"
-    )
-
-
-class SalesDetails(Base):
-    __tablename__ = "sales_details"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    sale_id: Mapped[int] = mapped_column(
-        ForeignKey("sales.id"), nullable=False
-    )
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey("products.id"), nullable=False
-    )
-    quantity: Mapped[float] = mapped_column(Float, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-    sale: Mapped["Sale"] = relationship(back_populates="details")
-
-
-class Purchase(Base):
-    __tablename__ = "purchases"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    quantity: Mapped[float] = mapped_column(Float, nullable=False)
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey("products.id"), nullable=False
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-
-    # Relationship to Product
-    product: Mapped["Product"] = relationship(back_populates="purchases")
+class ApplicationStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    VERIFIED = "VERIFIED"         # after chief verification
+    UNDER_REVIEW = "UNDER_REVIEW"
+    NEEDS_INFO = "NEEDS_INFO"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
 class User(Base):
     __tablename__ = "users"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(256), nullable=False)
-    phone: Mapped[str] = mapped_column(
-        String(256), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(
-        String(256), unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(
-        String(256), nullable=False)  # hashed password
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String, unique=True, index=True, nullable=False)
+    password = Column(String, nullable=False)  # hashed
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.APPLICANT)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
+    # Applications where this user is the applicant
+    applications = relationship(
+        "Application", foreign_keys='Application.user_id', back_populates="user")
+    # Applications assigned to this user as reviewer
+    assigned_applications = relationship(
+        "Application", foreign_keys='Application.assigned_reviewer_id', back_populates="assigned_reviewer")
+    # Reviews made by this user
+    reviews = relationship("Review", back_populates="reviewer")
 
 
-class Payment(Base):
-    __tablename__ = "payments"
-    id = Column(Integer, primary_key=True)
-    sale_id = Column(String)
-    merchant_request_id = Column(String)
-    checkout_request_id = Column(String)
-    trans_code = Column(String, nullable=True)
-    trans_amount = Column(Float, nullable=True)
-    phone_paid = Column(String, nullable=True)
+class Application(Base):
+    __tablename__ = "applications"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    full_name = Column(String, nullable=False)
+    phone = Column(String, nullable=False)
+    institution = Column(String, nullable=False)
+    course = Column(String, nullable=False)
+    year_of_study = Column(Integer, nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(Enum(ApplicationStatus), default=ApplicationStatus.PENDING)
+    assigned_reviewer_id = Column(
+        String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
+    # Applicant (the user who submitted)
+    user = relationship("User", foreign_keys=[
+                        user_id], back_populates="applications")
+    # Assigned reviewer
+    assigned_reviewer = relationship("User", foreign_keys=[
+                                     assigned_reviewer_id], back_populates="assigned_applications")
+    documents = relationship("Document", back_populates="application")
+    reviews = relationship("Review", back_populates="application")
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    application_id = Column(String, ForeignKey(
+        "applications.id"), nullable=False)
+    file_name = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    application = relationship("Application", back_populates="documents")
+
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    application_id = Column(String, ForeignKey(
+        "applications.id"), nullable=False)
+    reviewer_id = Column(String, ForeignKey("users.id"), nullable=False)
+    # APPROVED, REJECTED, NEEDS_INFO
+    recommendation = Column(String, nullable=False)
+    comments = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    application = relationship("Application", back_populates="reviews")
+    reviewer = relationship("User", back_populates="reviews")
+
+
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    created_by = Column(String, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
